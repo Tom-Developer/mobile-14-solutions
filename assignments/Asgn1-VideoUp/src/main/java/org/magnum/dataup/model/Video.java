@@ -112,11 +112,16 @@ public class Video {
 		this.subject = subject;
 	}
 
+	// This property can be written out or read by the client
+	// See: http://goo.gl/GPNf0f
 	@JsonProperty
 	public String getDataUrl() {
 		return dataUrl;
 	}
 
+	// This property can't be set by the client or modified
+	// on the server.
+	// See: http://goo.gl/GPNf0f
 	@JsonIgnore
 	public void setDataUrl(String dataUrl) {
 		this.dataUrl = dataUrl;
