@@ -1,5 +1,8 @@
 package org.magnum.dataup;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.magnum.dataup.model.Video;
 import org.magnum.dataup.model.VideoStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,29 +25,39 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import retrofit.mime.TypedFile;
+import org.springframework.web.multipart.MultipartFile;
 
 @Controller
 public class VideoService {
 	
 	// Some constants
-	public static final String DATA_PARAMETER = VideoSvcApi.DATA_PARAMETER; //"data";
-	public static final String ID_PARAMETER = VideoSvcApi.ID_PARAMETER; //"id";
-	public static final String VIDEO_SVC_PATH = VideoSvcApi.VIDEO_SVC_PATH; //"/video";
-	public static final String VIDEO_DATA_PATH = VideoSvcApi.VIDEO_DATA_PATH; 
-						//VIDEO_SVC_PATH + "/" + ID_PARAMETER + "/" + DATA_PARAMETER;
+	public static final String DATA_PARAMETER = VideoSvcApi.DATA_PARAMETER; 	//"data";
+	public static final String ID_PARAMETER = VideoSvcApi.ID_PARAMETER; 		//"id";
+	public static final String VIDEO_SVC_PATH = VideoSvcApi.VIDEO_SVC_PATH;   	//"/video";
+	public static final String VIDEO_DATA_PATH = VideoSvcApi.VIDEO_DATA_PATH;	//"/video/{id}/data"
 
 	// An in-memory list that the servlet uses to store the
 	// videos that are sent to it by clients
 	//private List<Video> videos = new CopyOnWriteArrayList<Video>();
+
+	// Logback logger
+	private Logger log = LoggerFactory.getLogger(this.getClass());
 	
 	// Video unique ID
 	private static final AtomicLong currentId = new AtomicLong(0L);
 	
 	// An in-memory data structure to store videos indexed by their 
 	// IDs
-	private Map<Long, Video> videos = new HashMap<Long, Video>();
+	private static Map<Long, Video> videos = new HashMap<Long, Video>();
+	
+	// Video file manager to store and retrieve video data files
+	private VideoFileManager fileManager;  
+	
+	
+	public VideoService() throws IOException {
+		fileManager = VideoFileManager.get();
+	}
+	
 
 	// Receives GET requests to /video and returns the current
 	// list of videos in memory. Spring automatically converts
@@ -90,10 +105,28 @@ public class VideoService {
 	@RequestMapping(value=VIDEO_DATA_PATH, method=RequestMethod.POST)
 	public 
 	@ResponseBody VideoStatus 
-	addVideoData(@PathVariable(ID_PARAMETER) String id, 
-				 @RequestParam(DATA_PARAMETER) TypedFile videoData) {
+	addVideoData(@PathVariable(ID_PARAMETER) long id, 
+				 @RequestParam(DATA_PARAMETER) MultipartFile videoData,
+				 HttpServletResponse response) 
+				throws IOException {
 		
+		// Retrieve video metadata/info
+		//Video v = videos.get(Long.parseLong(id));
+		Video v = videos.get(id);
+		if( v == null ) {			
+			String errorMsg = String.format("Video with %s hasn't been found on the server", id);
+			log.error(errorMsg);
+			response.sendError(404, errorMsg );
+			response.flushBuffer();
+			return new VideoStatus(VideoStatus.VideoState.PROCESSING);
+		}
+
+		InputStream in = videoData.getInputStream();
+		
+		// Save video data
+		fileManager.saveVideoData(v, in);
 		return new VideoStatus(VideoStatus.VideoState.READY);
+		
 	}
 	
 
@@ -101,21 +134,31 @@ public class VideoService {
 	// a Video object or a 404 if no video data has been set yet. The URL scheme
 	// is the same as in the method above and assumes that the client knows the ID
 	// of the Video object that it would like to retrieve video data for.
-	  
-/*	  This method uses Retrofit's @Streaming annotation to indicate that the
-	  method is going to access a large stream of data (e.g., the mpeg video 
-	  data on the server). The client can access this stream of data by obtaining
-	  an InputStream from the Response as shown below:
-	  
-	  VideoSvcApi client = ... // use retrofit to create the client
-	  Response response = client.getData(someVideoId);
-	  InputStream videoDataStream = response.getBody().in();
-*/	 
+ 
 	@RequestMapping(value=VIDEO_DATA_PATH, method=RequestMethod.GET)
     void getVideoData(@PathVariable(ID_PARAMETER) long id,
-    				  HttpServletResponse response) {
-		// TODO: find appropriate video using id
-		// TODO: return video in multipart response body
+    				  HttpServletResponse response) throws IOException {
+		
+		//Video v = videos.get(Long.parseLong(id));
+		Video v = videos.get(id);
+		if( v == null ) {
+			String errorMsg = String.format("Video with %s hasn't been found on the server", id);
+		    log.error( errorMsg );
+			response.sendError(HttpServletResponse.SC_NOT_FOUND, errorMsg );
+			response.flushBuffer();
+			return;
+		}
+		
+		if( fileManager.hasVideoData(v) ) {
+			OutputStream out = response.getOutputStream();
+			fileManager.copyVideoData(v, out);
+			response.flushBuffer();
+		} else {
+			log.error(String.format("File with %s hasn't been found on the server", id) );
+			response.sendError(HttpServletResponse.SC_NOT_FOUND, 
+					String.format("File with %s hasn't been found on the server", id) );
+			response.flushBuffer();
+		}
 	}
 	
 	
