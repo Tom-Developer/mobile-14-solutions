@@ -105,8 +105,8 @@ public class VideoService {
 	@RequestMapping(value=VIDEO_DATA_PATH, method=RequestMethod.POST)
 	public 
 	@ResponseBody VideoStatus 
-	addVideoData(@PathVariable(ID_PARAMETER) long id, 
-				 @RequestParam(DATA_PARAMETER) MultipartFile videoData,
+	addVideoData(@PathVariable(ID_PARAMETER) long id, //extract id from URL path
+				 @RequestParam(DATA_PARAMETER) MultipartFile videoData, //extract MultipartFile from request parameters
 				 HttpServletResponse response) 
 				throws IOException {
 		
