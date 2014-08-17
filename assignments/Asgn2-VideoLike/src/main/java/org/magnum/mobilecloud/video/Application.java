@@ -86,24 +86,11 @@ public class Application extends RepositoryRestMvcConfiguration {
 	// client.
 	//
 	// See the ResourcesMapper class for more details.
-    // TODO: check if it's needed. Instructions say I won't be able to use
-    // Spring JPA Repository
 //	@Override
 //	public ObjectMapper halObjectMapper(){
 //		return new ResourcesMapper();
 //	}
 //	
-	
-	// We need to tell Spring which implementation of the VideoRepository
-	// that it should use. Spring is going to automatically inject whatever
-	// we return into the VideoService videos member variable that is annotated
-	// with @Autowired.
-//	@Bean
-//	public VideoRepository videoRepository(){
-//		// NoDuplicatesVideoRepository exists in example 4.
-//		//return new NoDuplicatesVideoRepository();
-//		return new VideoRepository(); //it's interface
-//	}
 	
 
 	// This version uses the Tomcat web container and configures it to
@@ -127,7 +114,7 @@ public class Application extends RepositoryRestMvcConfiguration {
 	//
 	//       http://tomcat.apache.org/tomcat-7.0-doc/ssl-howto.html
 	
-	// Comment out this version of the method because the same code exists in
+	// COMMENT out this version of the method because the same code exists in
 	// OAuth2SecurityConfiguration.java. This is in README.md.
 /*    @Bean
     EmbeddedServletContainerCustomizer containerCustomizer(

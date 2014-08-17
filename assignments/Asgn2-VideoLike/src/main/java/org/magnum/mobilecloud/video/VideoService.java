@@ -37,8 +37,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import retrofit.http.Path;
-
 import com.google.common.collect.Lists;
 
 
@@ -59,7 +57,7 @@ public class VideoService {
 	private VideoRepository videos;
 	
 		
-	// POST /oauth/token It's implemented by OAuth2SecurityConfiguration
+	// POST /oauth/token. It's implemented by OAuth2SecurityConfiguration
 	// Receives POST requests to /oauth/token - the access point for the
 	// OAuth 2.0 Password Grant flow. Clients should be able to submit a request
 	// with their username, password, client ID, and client secret, encoded
@@ -114,6 +112,7 @@ public class VideoService {
 		//Video v = videos.get(Long.parseLong(id));
 		Video v = videos.findOne(id);
 		if( v == null ) {
+			// This is copied from assignment 1. If logback was used.
 			//String errorMsg = String.format("Video with %s hasn't been found on the server", id);
 		    //log.error( errorMsg );
 			//response.sendError(HttpServletResponse.SC_NOT_FOUND, errorMsg );
